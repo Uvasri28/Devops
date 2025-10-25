@@ -64,5 +64,4 @@ jobs:
         images: |
           ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
         # Wait for the rollout to complete
-        rollout-status: true
 
