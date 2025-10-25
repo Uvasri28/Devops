@@ -6,6 +6,8 @@ metadata:
     app: pritam-web
 spec:
   replicas: 2 # Number of instances
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: pritam-web
