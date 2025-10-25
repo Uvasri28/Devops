@@ -24,14 +24,21 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
+        # The 'creds' input expects the full JSON string
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    # -----------------------------------------------------------------------
+    # FIX: We use fromJson() to parse the AZURE_CREDENTIALS secret string
+    # into an object so we can access .clientId and .clientSecret properties.
+    # -----------------------------------------------------------------------
     - name: ACR Login
       uses: azure/docker-login@v2
       with:
         login-server: ${{ env.ACR_NAME }}.azurecr.io
-        username: ${{ secrets.AZURE_CREDENTIALS.clientId }} # Use SP credentials for ACR
-        password: ${{ secrets.AZURE_CREDENTIALS.clientSecret }}
+        # Use fromJson to correctly retrieve the Service Principal ID for username
+        username: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
+        # Use fromJson to correctly retrieve the Service Principal Secret for password
+        password: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
 
     - name: Build and push Docker image to ACR
       run: |
@@ -58,3 +65,4 @@ jobs:
           ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
         # Wait for the rollout to complete
         rollout-status: true
+
