@@ -1,0 +1,60 @@
+name: CI/CD to Azure AKS
+
+on:
+  push:
+    branches:
+      - main # Trigger on push to the main branch
+
+# Environment variables for the workflow
+env:
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  IMAGE_NAME: pritam-web
+  TAG: ${{ github.sha }} # Use Git SHA as the unique tag
+  
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # ------------------
+    # CI: Build and Push
+    # ------------------
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: ACR Login
+      uses: azure/docker-login@v2
+      with:
+        login-server: ${{ env.ACR_NAME }}.azurecr.io
+        username: ${{ secrets.AZURE_CREDENTIALS.clientId }} # Use SP credentials for ACR
+        password: ${{ secrets.AZURE_CREDENTIALS.clientSecret }}
+
+    - name: Build and push Docker image to ACR
+      run: |
+        docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }} .
+        docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+
+    # ------------------
+    # CD: Deploy to AKS
+    # ------------------
+    - name: Set up kubectl
+      uses: azure/aks-set-context@v4
+      with:
+        resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+        
+    - name: Deploy to AKS
+      uses: azure/k8s-deploy@v5
+      with:
+        # Update the deployment manifest with the new image tag
+        manifests: |
+          k8s/deployment.yaml
+          k8s/service.yaml
+        images: |
+          ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+        # Wait for the rollout to complete
+        rollout-status: true

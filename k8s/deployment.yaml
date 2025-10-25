@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pritam-web-deployment
+  labels:
+    app: pritam-web
+spec:
+  replicas: 2 # Number of instances
+  selector:
+    matchLabels:
+      app: pritam-web
+  template:
+    metadata:
+      labels:
+        app: pritam-web
+    spec:
+      containers:
+      - name: pritam-web-container
+        # Placeholder image - this will be replaced by the CI/CD pipeline
+        image: devopcontainer.azurecr.io/pritam-web:latest
+        ports:
+        - containerPort: 80
